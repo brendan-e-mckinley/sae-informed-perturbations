@@ -10,7 +10,7 @@ import json
 from sae_lens import SAE
 
 # Set device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("mps" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
 class WordConceptAnalyzer:
@@ -42,7 +42,7 @@ class WordConceptAnalyzer:
         
         # Hook for capturing activations
         self.activations = None
-        self.hook_handle = None
+        self.hook_handle = None  # Initialize attribute
         
         # Set up hook
         self._set_activation_hook()
@@ -409,7 +409,7 @@ class WordConceptAnalyzer:
     
     def __del__(self):
         """Clean up when object is deleted"""
-        if self.hook_handle:
+        if hasattr(self, 'hook_handle') and self.hook_handle is not None:
             self.hook_handle.remove()
 
 # Example usage
