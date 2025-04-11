@@ -4,147 +4,19 @@ import matplotlib.pyplot as plt
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 from tqdm import tqdm
 import os
-import requests
 from pathlib import Path
-import zipfile
+import requests
 import json
+from sae_lens import SAE
 
 # Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
-# Function to download and extract Neuronpedia SAE files
-def setup_neuronpedia_sae(model_name="gpt2", layer=7):
-    """
-    Download and extract Neuronpedia SAE model files for GPT2-small.
-    
-    Args:
-        model_name: The name of the model (default: "gpt2")
-        layer: The layer number to use (default: 7)
-    
-    Returns:
-        Path to the extracted SAE model directory
-    """
-    # Create directories
-    cache_dir = Path("./neuronpedia_cache")
-    cache_dir.mkdir(exist_ok=True)
-    
-    # Download SAE files if they don't exist
-    sae_zip_path = cache_dir / f"{model_name}_l{layer}_sae.zip"
-    if not sae_zip_path.exists():
-        print(f"Downloading Neuronpedia SAE for {model_name} layer {layer}...")
-        # URL for GPT2-small layer 7 SAE from Neuronpedia
-        url = f"https://huggingface.co/datasets/neuronpedia/sae_components/resolve/main/{model_name}_l{layer}_sae.zip"
-        response = requests.get(url, stream=True)
-        response.raise_for_status()
-        with open(sae_zip_path, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-    
-    # Extract SAE files
-    sae_dir = cache_dir / f"{model_name}_l{layer}_sae"
-    if not sae_dir.exists():
-        print(f"Extracting SAE files to {sae_dir}...")
-        with zipfile.ZipFile(sae_zip_path, 'r') as zip_ref:
-            zip_ref.extractall(sae_dir)
-    
-    return sae_dir
-
-# Class to load and use Neuronpedia SAE
-class NeuronpediaSAE:
-    def __init__(self, model_name="gpt2", layer=7):
-        """
-        Initialize the SAE model from Neuronpedia.
-        
-        Args:
-            model_name: Name of the model (default: "gpt2")
-            layer: Layer number (default: 7)
-        """
-        self.model_name = model_name
-        self.layer = layer
-        
-        # Setup SAE files
-        self.sae_dir = setup_neuronpedia_sae(model_name, layer)
-        
-        # Load SAE encoder and decoder weights
-        self.encoder_w = torch.tensor(np.load(self.sae_dir / "encoder_weight.npy"), device=device)
-        self.decoder_w = torch.tensor(np.load(self.sae_dir / "decoder_weight.npy"), device=device)
-        self.encoder_b = torch.tensor(np.load(self.sae_dir / "encoder_bias.npy"), device=device)
-        
-        # Load feature metadata
-        meta_path = self.sae_dir / "feature_metadata.json"
-        if meta_path.exists():
-            with open(meta_path, 'r') as f:
-                self.feature_metadata = json.load(f)
-        else:
-            self.feature_metadata = None
-            print("Feature metadata not found.")
-        
-        # Initialize input dimension from weights
-        self.input_dim = self.encoder_w.shape[1]
-        self.n_features = self.encoder_w.shape[0]
-        
-        print(f"Loaded SAE with {self.n_features} features for {self.input_dim} neurons.")
-    
-    def encode(self, activations):
-        """
-        Encode activations using the SAE.
-        
-        Args:
-            activations: Tensor of activations from the model
-            
-        Returns:
-            Tensor of sparse feature activations
-        """
-        if len(activations.shape) == 1:
-            activations = activations.unsqueeze(0)
-            
-        # Ensure activations are on the right device
-        activations = activations.to(self.encoder_w.device)
-        
-        # Forward pass through encoder
-        pre_relu = torch.matmul(activations, self.encoder_w.t()) + self.encoder_b
-        features = torch.relu(pre_relu)
-        
-        return features
-    
-    def decode(self, features):
-        """Reconstruct activations from features"""
-        return torch.matmul(features, self.decoder_w)
-    
-    def get_top_features(self, activations, top_n=10):
-        """Get the top activated features for given neuron activations"""
-        features = self.encode(activations)
-        
-        if len(features.shape) == 1:
-            features = features.unsqueeze(0)
-            
-        # Get top features
-        values, indices = torch.topk(features, k=min(top_n, features.shape[1]), dim=1)
-        
-        return values, indices
-    
-    def get_feature_descriptions(self, feature_indices):
-        """Get descriptions for feature indices if metadata is available"""
-        if self.feature_metadata is None:
-            return [f"Feature {idx}" for idx in feature_indices]
-        
-        descriptions = []
-        for idx in feature_indices:
-            idx_str = str(idx.item() if isinstance(idx, torch.Tensor) else idx)
-            if idx_str in self.feature_metadata:
-                desc = self.feature_metadata[idx_str].get("description", f"Feature {idx_str}")
-                descriptions.append(desc)
-            else:
-                descriptions.append(f"Feature {idx_str}")
-                
-        return descriptions
-
-# Class for word concept analysis
 class WordConceptAnalyzer:
     def __init__(self, model_name="gpt2", layer=7):
         """
-        Initialize the word concept analyzer.
+        Initialize the word concept analyzer with SAELens.
         
         Args:
             model_name: Name of the model (default: "gpt2")
@@ -153,17 +25,24 @@ class WordConceptAnalyzer:
         self.model_name = model_name
         self.layer = layer
         
-        # Load model and tokenizer
+        # Load transformers model and tokenizer
         print(f"Loading {model_name} model and tokenizer...")
         self.tokenizer = GPT2Tokenizer.from_pretrained(model_name)
         self.model = GPT2LMHeadModel.from_pretrained(model_name).to(device)
         
+        # Load SAE model from SAELens
+        print(f"Loading SAELens model for {model_name}, layer {layer}...")
+        self.sae_model = SAE.from_pretrained(
+            release = "gpt2-small-res-jb", # see other options in sae_lens/pretrained_saes.yaml
+            sae_id = "blocks.8.hook_resid_pre", # won't always be a hook point
+            device = "cuda"
+        )
+        
+        print(f"SAELens model loaded with {len(self.sae_model.features)} features")
+        
         # Hook for capturing activations
         self.activations = None
         self.hook_handle = None
-        
-        # Load SAE
-        self.sae = NeuronpediaSAE(model_name, layer)
         
         # Set up hook
         self._set_activation_hook()
@@ -203,7 +82,7 @@ class WordConceptAnalyzer:
         contexts = [template.format(word=word) for template in context_templates]
         
         # Track activations across all contexts
-        all_feature_activations = []
+        all_word_activations = []
         
         for context in contexts:
             # Encode text
@@ -235,31 +114,35 @@ class WordConceptAnalyzer:
             # Get activations for the word tokens
             for pos in positions:
                 if pos < self.activations.shape[1]:  # Ensure position is valid
-                    token_activations = self.activations[0, pos, :]
-                    
-                    # Encode with SAE to get feature activations
-                    feature_activations = self.sae.encode(token_activations)
-                    all_feature_activations.append(feature_activations)
+                    token_activations = self.activations[0, pos, :].cpu().numpy()
+                    all_word_activations.append(token_activations)
         
         # Combine feature activations across all contexts
-        if not all_feature_activations:
+        if not all_word_activations:
             return {"error": f"Could not analyze word '{word}' in any context"}
         
-        combined_features = torch.stack(all_feature_activations).mean(dim=0)
+        # Average activations across all occurrences
+        combined_activations = np.mean(all_word_activations, axis=0)
+        
+        # Use SAELens to get feature activations
+        feature_activations = self.sae_model.encode_activations(combined_activations)
         
         # Get top features
-        values, indices = torch.topk(combined_features, k=min(top_n, combined_features.shape[0]))
-        indices = indices.cpu().numpy()
-        values = values.cpu().numpy()
+        top_indices = np.argsort(-feature_activations)[:top_n]
+        top_values = feature_activations[top_indices]
         
         # Get feature descriptions
-        descriptions = self.sae.get_feature_descriptions(indices)
+        feature_descriptions = []
+        for idx in top_indices:
+            feature = self.sae_model.features[idx]
+            desc = feature.name if hasattr(feature, 'name') and feature.name else f"Feature {idx}"
+            feature_descriptions.append(desc)
         
         return {
             "word": word,
-            "top_feature_indices": indices.tolist(),
-            "top_feature_activations": values.tolist(),
-            "top_feature_descriptions": descriptions,
+            "top_feature_indices": top_indices.tolist(),
+            "top_feature_activations": top_values.tolist(),
+            "top_feature_descriptions": feature_descriptions,
             "contexts_analyzed": contexts
         }
     
@@ -308,6 +191,38 @@ class WordConceptAnalyzer:
         plt.tight_layout()
         plt.show()
     
+    def get_feature_examples(self, feature_idx, top_n=5):
+        """
+        Get examples and information about a specific feature.
+        
+        Args:
+            feature_idx: Index of the feature to examine
+            top_n: Number of top examples to show
+            
+        Returns:
+            Dictionary with feature information
+        """
+        try:
+            feature = self.sae_model.features[feature_idx]
+            
+            # Get feature information from SAELens
+            info = {
+                "feature_index": feature_idx,
+                "name": feature.name if hasattr(feature, 'name') else f"Feature {feature_idx}",
+                "description": feature.description if hasattr(feature, 'description') else "No description available"
+            }
+            
+            # Get examples if available
+            if hasattr(feature, 'examples') and feature.examples:
+                info["examples"] = feature.examples[:top_n]
+            else:
+                info["examples"] = ["No examples available"]
+                
+            return info
+            
+        except IndexError:
+            return {"error": f"Feature index {feature_idx} is out of range"}
+    
     def compare_words(self, words, top_n=10):
         """
         Compare concept features across multiple words.
@@ -348,7 +263,11 @@ class WordConceptAnalyzer:
             shared_features = list(potential_shared)
             
             # Get descriptions for shared features
-            shared_descriptions = self.sae.get_feature_descriptions(shared_features)
+            shared_descriptions = []
+            for feat_idx in shared_features:
+                feature = self.sae_model.features[feat_idx]
+                desc = feature.name if hasattr(feature, 'name') and feature.name else f"Feature {feat_idx}"
+                shared_descriptions.append(desc)
             
             comparison["shared_features"] = [
                 {"feature": feat, "description": desc}
@@ -371,7 +290,11 @@ class WordConceptAnalyzer:
             
             # Get descriptions for unique features
             unique_list = list(unique_features)
-            unique_descriptions = self.sae.get_feature_descriptions(unique_list)
+            unique_descriptions = []
+            for feat_idx in unique_list:
+                feature = self.sae_model.features[feat_idx]
+                desc = feature.name if hasattr(feature, 'name') and feature.name else f"Feature {feat_idx}"
+                unique_descriptions.append(desc)
             
             comparison["unique_features"][word] = [
                 {"feature": feat, "description": desc}
@@ -392,7 +315,13 @@ class WordConceptAnalyzer:
                 
                 overlap = features1 & features2
                 overlap_list = list(overlap)
-                overlap_descriptions = self.sae.get_feature_descriptions(overlap_list)
+                
+                # Get descriptions for overlapping features
+                overlap_descriptions = []
+                for feat_idx in overlap_list:
+                    feature = self.sae_model.features[feat_idx]
+                    desc = feature.name if hasattr(feature, 'name') and feature.name else f"Feature {feat_idx}"
+                    overlap_descriptions.append(desc)
                 
                 pair_key = f"{word1}_{word2}"
                 comparison["feature_overlap"][pair_key] = [
@@ -497,6 +426,16 @@ def main():
     print(f"Top feature descriptions:")
     for i, (idx, desc) in enumerate(zip(results['top_feature_indices'], results['top_feature_descriptions'])):
         print(f"  {i+1}. Feature {idx}: {desc}")
+    
+    # Get more info about the top feature
+    top_feature = results['top_feature_indices'][0]
+    feature_info = analyzer.get_feature_examples(top_feature)
+    print(f"\nInformation about Feature {top_feature}:")
+    print(f"  Name: {feature_info['name']}")
+    print(f"  Description: {feature_info['description']}")
+    print("  Examples:")
+    for ex in feature_info['examples']:
+        print(f"    - {ex}")
     
     # Visualize the results
     analyzer.visualize_word_concepts(word, results)
