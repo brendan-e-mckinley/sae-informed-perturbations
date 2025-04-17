@@ -1,4 +1,5 @@
 from utils import getStrongestFeatureForWord, getWeakestWordForFeature
+from model_interaction import compare_outputs
 from nltk.corpus import wordnet
 
 model_id = "gpt2-small"
@@ -16,4 +17,8 @@ for synonym in wordnet.synsets(target_word):
 layer, index = getStrongestFeatureForWord(model_id, target_word)
 weakest_synonym = getWeakestWordForFeature(model_id, layer, index, synonyms)
 
+modified_prompt = prompt.replace(target_word, weakest_synonym)
+
 print("Weakest synonym: ", weakest_synonym)
+
+original_output, perturbed_output, metrics = compare_outputs(prompt, modified_prompt)
