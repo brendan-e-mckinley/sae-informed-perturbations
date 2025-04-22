@@ -1,6 +1,6 @@
 import requests
 
-def getWeakestWordForFeature(model_id, layer, index, synonyms):
+def getWeakestTextForFeature(model_id, layer, index, synonyms):
     # Initialize variables
     weakest_word = None
     smallest_max_value = float('inf')
@@ -41,12 +41,11 @@ def getWeakestWordForFeature(model_id, layer, index, synonyms):
 
     return weakest_word
 
-def getStrongestFeatureForWord(model_id, target_word):
-    source_set = "res-jb"  # Pretrained SAE set
+def getStrongestFeatureForText(model_id, source_set, target_word):
     layer = 6              # A mid-level layer where concept features tend to emerge
 
     # Compose the layer ID string expected by the API
-    selected_layer = f"{layer}-res-jb"
+    selected_layer = f"{layer}-{source_set}"
 
     # Build the request
     url = "https://www.neuronpedia.org/api/search-all"
