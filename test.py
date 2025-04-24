@@ -4,7 +4,7 @@ from nltk.corpus import wordnet
 
 model_id = "gpt2-small"
 source_set = "att-kk"
-original_prompt = "quick brown fox jumps over the lazy dog"
+original_prompt = "100 meters, is 10000 centimeters. That's not a very long road and here is some other text!"
 
 out_of_vocabulary_word = "zzzzqqqq"
 

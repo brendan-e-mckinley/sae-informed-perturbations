@@ -50,7 +50,7 @@ def getDiffForAlteredPrompt(model_id, layer, index, altered_prompt, original_pro
         print("Response content:", response_altered.content.decode())
         return
     
-    diff = numpy.linalg.norm(values_altered) - numpy.linalg.norm(values_original)
+    diff = abs(numpy.linalg.norm(values_altered) - numpy.linalg.norm(values_original))
     return diff
 
 def getWeakestTextForFeature(model_id, layer, index, texts, original_prompt):
@@ -59,12 +59,12 @@ def getWeakestTextForFeature(model_id, layer, index, texts, original_prompt):
     greatest_diff = float(0)
 
     for text in texts:
-      # Get the diff for this text
-      diff = getDiffForAlteredPrompt(model_id, layer, index, text, original_prompt)
-    # Check if this is the largest diff so far
-    if diff > greatest_diff:
-        greatest_diff = diff
-        weakest_prompt = text
+        # Get the diff for this text
+        diff = getDiffForAlteredPrompt(model_id, layer, index, text, original_prompt)
+        # Check if this is the largest diff so far
+        if diff > greatest_diff:
+            greatest_diff = diff
+            weakest_prompt = text
     
     return weakest_prompt
 
