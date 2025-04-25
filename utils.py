@@ -51,6 +51,7 @@ def getDiffForAlteredPrompt(model_id, layer, index, altered_prompt, original_pro
         return
     
     diff = abs(numpy.linalg.norm(values_altered) - numpy.linalg.norm(values_original))
+    #diff = numpy.linalg.norm(values_altered - values_original)
     return diff
 
 def getWeakestTextForFeature(model_id, layer, index, texts, original_prompt):
