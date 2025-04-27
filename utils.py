@@ -6,21 +6,10 @@ headers = {
     "Content-Type": "application/json",
     "Authorization": f"Bearer {api_key}"
 }
-layer = 9              # A mid-level layer where concept features tend to emerge
+activation_url = "https://www.neuronpedia.org/api/activation/new"
+search_all_url = "https://www.neuronpedia.org/api/search-all"
 
-def getDiffForAlteredPrompt(model_id, layer, index, altered_prompt, original_prompt):
-    # Request params for all requests
-    url = "https://www.neuronpedia.org/api/activation/new"
-
-    # Build the requests
-    payload_original = {
-        "feature": {
-        "modelId": model_id,
-        "source": layer,
-        "index": index
-    },
-    "customText": original_prompt
-    }
+def getDiffForAlteredPrompt(model_id, layer, index, altered_prompt, values_original):
     payload_altered = {
         "feature": {
         "modelId": model_id,
@@ -29,18 +18,8 @@ def getDiffForAlteredPrompt(model_id, layer, index, altered_prompt, original_pro
     },
     "customText": altered_prompt
     }
-
-    response_original = requests.post(url, headers=headers, json=payload_original)
-    # Handle the response
-    if response_original.status_code == 200:
-        data_original = response_original.json()
-        values_original = numpy.array(data_original.get("values", []))
-    else:
-        print("Request failed:", response_original.status_code)
-        print("Response content:", response_original.content.decode())
-        return
     
-    response_altered = requests.post(url, headers=headers, json=payload_altered)
+    response_altered = requests.post(activation_url, headers=headers, json=payload_altered)
     # Handle the response
     if response_altered.status_code == 200:
         data_altered = response_altered.json()
@@ -59,9 +38,29 @@ def getWeakestTextForFeature(model_id, layer, index, texts, original_prompt):
     weakest_prompt = None
     greatest_diff = float(0)
 
+    # Get activation values for original prompt
+    payload_original = {
+        "feature": {
+        "modelId": model_id,
+        "source": layer,
+        "index": index
+    },
+    "customText": original_prompt
+    }
+
+    response_original = requests.post(activation_url, headers=headers, json=payload_original)
+    
+    # Handle the response
+    if response_original.status_code == 200:
+        data_original = response_original.json()
+        values_original = numpy.array(data_original.get("values", []))
+    else:
+        print("Request failed:", response_original.status_code)
+        print("Response content:", response_original.content.decode())
+
     for text in texts:
         # Get the diff for this text
-        diff = getDiffForAlteredPrompt(model_id, layer, index, text, original_prompt)
+        diff = getDiffForAlteredPrompt(model_id, layer, index, text, values_original)
         # Check if this is the largest diff so far
         if diff > greatest_diff:
             greatest_diff = diff
@@ -73,8 +72,6 @@ def getStrongestFeaturesForText(model_id, source_set, target_word):
     # Compose the layer ID string expected by the API
     #selected_layer = f"{layer}-{source_set}"
 
-    # Build the request
-    url = "https://www.neuronpedia.org/api/search-all"
     payload = {
         "modelId": model_id,
         "sourceSet": source_set,
@@ -87,7 +84,7 @@ def getStrongestFeaturesForText(model_id, source_set, target_word):
     }
 
     # Send the request
-    response = requests.post(url, headers=headers, json=payload)
+    response = requests.post(search_all_url, headers=headers, json=payload)
 
     # Handle the response
     if response.status_code == 200:
