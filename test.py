@@ -2,6 +2,7 @@ from utils import getStrongestFeaturesForText, getWeakestTextForFeature
 from model_interaction import compare_outputs
 from nltk.corpus import wordnet
 import re
+import random
 
 model_id = "gpt2-small"
 source_set = "att-kk"
@@ -48,6 +49,7 @@ for synonym in wordnet.synsets(target_word):
             synonym_prompt = re.sub(pattern, word, original_prompt)
             synonym_prompts.append(synonym_prompt)
 
+random_synonym_prompt = random.choice(synonym_prompts)
 
 #layer, index = getStrongestFeaturesForText(model_id, source_set, target_word)
 weakest_synonym_prompt = getWeakestTextForFeature(model_id, layer, index, synonym_prompts, original_prompt)
