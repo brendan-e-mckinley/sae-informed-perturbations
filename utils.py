@@ -9,7 +9,36 @@ headers = {
 activation_url = "https://www.neuronpedia.org/api/activation/new"
 search_all_url = "https://www.neuronpedia.org/api/search-all"
 
-def getDiffForAlteredPrompt(model_id, layer, index, altered_prompt, values_original):
+def alignPrompts(shorter_tokens, longer_tokens, shorter_values, longer_values):
+    shorter_indices_to_remove = []
+    longer_indices_to_remove = []
+
+    j = 0  # index for original tokens
+    
+    for i in range(len(shorter_tokens)):
+        if (shorter_tokens[i] != longer_tokens[j]):
+            shorter_indices_to_remove.append(i)
+            longer_indices_to_remove.append(j)
+            j += 1
+            while (shorter_tokens[i + 1] != longer_tokens[j] and shorter_tokens[i + 2] != longer_tokens[j]):
+                longer_indices_to_remove.append(j)
+                j += 1
+        else:
+            j += 1
+    
+    longer_values_aligned = longer_values.copy()
+    mask = numpy.ones(len(longer_values_aligned), dtype=bool)
+    mask[longer_indices_to_remove] = False
+    longer_values_aligned = longer_values_aligned[mask]
+
+    shorter_values_aligned = shorter_values.copy()
+    mask = numpy.ones(len(shorter_values_aligned), dtype=bool)
+    mask[shorter_indices_to_remove] = False
+    shorter_values_aligned = shorter_values_aligned[mask]
+
+    return shorter_values_aligned, longer_values_aligned
+
+def getDiffForAlteredPrompt(model_id, layer, index, altered_prompt, values_original, tokens_original):
     payload_altered = {
         "feature": {
         "modelId": model_id,
@@ -24,13 +53,19 @@ def getDiffForAlteredPrompt(model_id, layer, index, altered_prompt, values_origi
     if response_altered.status_code == 200:
         data_altered = response_altered.json()
         values_altered = numpy.array(data_altered.get("values", []))
+        tokens_altered = numpy.array(data_altered.get("tokens", []))
     else:
         print("Request failed:", response_altered.status_code)
         print("Response content:", response_altered.content.decode())
         return
-    
-    diff = abs(numpy.linalg.norm(values_altered) - numpy.linalg.norm(values_original))
-    #diff = numpy.linalg.norm(values_altered - values_original)
+
+    if (len(tokens_altered) < len(tokens_original)):
+        values_altered, values_original = alignPrompts(tokens_altered, tokens_original, values_altered, values_original)
+    else:
+        values_original, values_altered = alignPrompts(tokens_original, tokens_altered, values_original, values_altered)
+
+    #diff = abs(numpy.linalg.norm(values_altered) - numpy.linalg.norm(values_original))
+    diff = numpy.linalg.norm(values_altered - values_original)
     return diff
 
 def getWeakestTextForFeature(model_id, layer, index, texts, original_prompt):
@@ -54,13 +89,14 @@ def getWeakestTextForFeature(model_id, layer, index, texts, original_prompt):
     if response_original.status_code == 200:
         data_original = response_original.json()
         values_original = numpy.array(data_original.get("values", []))
+        tokens_original = numpy.array(data_original.get("tokens", []))
     else:
         print("Request failed:", response_original.status_code)
         print("Response content:", response_original.content.decode())
 
     for text in texts:
         # Get the diff for this text
-        diff = getDiffForAlteredPrompt(model_id, layer, index, text, values_original)
+        diff = getDiffForAlteredPrompt(model_id, layer, index, text, values_original, tokens_original)
         # Check if this is the largest diff so far
         if diff > greatest_diff:
             greatest_diff = diff
