@@ -13,18 +13,51 @@ def alignPrompts(shorter_tokens, longer_tokens, shorter_values, longer_values):
     shorter_indices_to_remove = []
     longer_indices_to_remove = []
 
-    j = 0  # index for original tokens
+    # shorter token index
+    j = 0
     
-    for i in range(len(shorter_tokens)):
-        if (shorter_tokens[i] != longer_tokens[j]):
-            shorter_indices_to_remove.append(i)
-            longer_indices_to_remove.append(j)
-            j += 1
-            while (shorter_tokens[i + 1] != longer_tokens[j] and shorter_tokens[i + 2] != longer_tokens[j]):
-                longer_indices_to_remove.append(j)
-                j += 1
-        else:
-            j += 1
+    common_elements = list(set(shorter_tokens) & set(longer_tokens))
+
+    for i in range(len(longer_tokens)):
+        if longer_tokens[i] not in common_elements:
+            longer_indices_to_remove.append(i)
+    for j in range(len(shorter_tokens)):
+        if shorter_tokens[j] not in common_elements:
+            shorter_indices_to_remove.append(j)
+
+
+    # for i in range(len(shorter_tokens)):
+    #     if shorter_tokens[i] != longer_tokens[i]:
+    #         longer_indices_to_remove.append(i)
+
+    #         remaining_tokens = shorter_tokens[i:]
+    #         longer_tokens_index = i + 1
+
+    #         while (longer_tokens_index < len(longer_tokens) and longer_tokens[longer_tokens_index] not in remaining_tokens):
+    #             longer_indices_to_remove.append(longer_tokens_index)
+    #             longer_tokens_index += 1
+            
+    #         if (i >= longer_tokens_index):
+    #             shorter_indices_to_remove.extend(range((i+1),longer_tokens_index))
+
+    #         break
+    
+    # for i in range(len(shorter_tokens)):
+    #     if (j < len(longer_tokens) and shorter_tokens[i] != longer_tokens[j]):
+    #         shorter_indices_to_remove.append(i)
+    #         longer_indices_to_remove.append(j)
+    #         j += 1
+    #         if j < len(longer_tokens):
+    #             if i + 2 < len(shorter_tokens):
+    #                 while (shorter_tokens[i + 1] != longer_tokens[j] and shorter_tokens[i + 2] != longer_tokens[j]):
+    #                     longer_indices_to_remove.append(j)
+    #                     j += 1
+    #             elif i + 1 < len(shorter_tokens):
+    #                 while (shorter_tokens[i + 1] != longer_tokens[j]):
+    #                     longer_indices_to_remove.append(j)
+    #                     j += 1   
+    #     else:
+    #         j += 1
     
     longer_values_aligned = longer_values.copy()
     mask = numpy.ones(len(longer_values_aligned), dtype=bool)
