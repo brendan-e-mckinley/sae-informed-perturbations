@@ -46,7 +46,7 @@ def save_output_to_file(file, original_output, perturbed_output, random_output):
     except Exception as e:
         print(f"Error writing to file: {e}")
 
-file_path = "prompts.txt"  # Change this to your file path
+file_path = "good_prompts.txt" 
 prompt_array = read_prompts_from_file(file_path)
     
 # Print the number of prompts read
