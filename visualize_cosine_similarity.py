@@ -68,17 +68,18 @@ tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
 model = GPT2LMHeadModel.from_pretrained('gpt2')
 model.eval()
 
-# Get embeddings
-original_embedding = get_embeddings(original_output, tokenizer, model)
-perturbed_embedding = get_embeddings(perturbed_output, tokenizer, model)
-random_embedding = get_embeddings(random_output, tokenizer, model)
+for output in prompt_outputs:
+    # Get embeddings
+    original_embedding = get_embeddings(output['original_output'], tokenizer, model)
+    perturbed_embedding = get_embeddings(output['perturbed_output'], tokenizer, model)
+    random_embedding = get_embeddings(output['random_output'], tokenizer, model)
+    
+    # Calculate similarity metrics
+    cos_sim_sae.append(cosine_similarity(original_embedding, perturbed_embedding)[0][0])
+    cos_sim_random.append(cosine_similarity(original_embedding, random_embedding)[0][0])
 
-# Calculate similarity metrics
-cos_sim_sae.append(cosine_similarity(original_embedding, perturbed_embedding)[0][0])
-cos_sim_random.append(cosine_similarity(original_embedding, random_embedding)[0][0])
-
-plt.plot(range(100), cos_sim_sae, linestyle='--', marker='o', color='red')
-plt.plot(range(100), cos_sim_random, linestyle='--', marker='o', color='green')
+plt.plot(range(32), cos_sim_sae, linestyle='--', marker='o', color='red')
+plt.plot(range(32), cos_sim_random, linestyle='--', marker='o', color='green')
 
 # Add cosine similarity text
 plt.figtext(0.5, 0.01, f'Cosine Similarity', ha='center', fontsize=12, 
