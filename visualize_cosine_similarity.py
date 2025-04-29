@@ -1,5 +1,6 @@
 
 import matplotlib.pyplot as plt
+import numpy as np
 from model_interaction import get_embeddings, cosine_similarity
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
@@ -60,7 +61,7 @@ def parse_prompt_file(file_path):
 cos_sim_sae = []
 cos_sim_random = []
 
-# TO DO: Read from file
+# Read from file
 prompt_outputs = parse_prompt_file("saved_output.txt")
 
 # Load model and tokenizer
@@ -78,8 +79,8 @@ for output in prompt_outputs:
     cos_sim_sae.append(cosine_similarity(original_embedding, perturbed_embedding)[0][0])
     cos_sim_random.append(cosine_similarity(original_embedding, random_embedding)[0][0])
 
-plt.plot(range(32), cos_sim_sae, linestyle='--', marker='o', color='red')
-plt.plot(range(32), cos_sim_random, linestyle='--', marker='o', color='green')
+plt.plot(range(79), cos_sim_sae, linestyle='--', marker='o', color='red')
+plt.plot(range(79), cos_sim_random, linestyle='--', marker='o', color='green')
 
 # Add cosine similarity text
 plt.figtext(0.5, 0.01, f'Cosine Similarity', ha='center', fontsize=12, 
@@ -92,5 +93,34 @@ plt.grid(True)
 plt.xlabel('Iteration')
 plt.ylabel('Cosine Similarity')
 plt.title('Cosine Similarity Visualization')
+
+plt.show()
+
+# Groups 
+sae_groups = []
+random_groups = []
+
+group_count = np.arange(19, 80, 20)
+
+for count in group_count:
+    sae_groups.append(sum(cos_sim_sae[(count - 19):count])/19)
+    random_groups.append(sum(cos_sim_random[(count - 19):count])/19)
+
+plt.figure()
+
+plt.plot(group_count, sae_groups, linestyle='--', marker='o', color='black')
+plt.plot(group_count, random_groups, linestyle='--', marker='o', color='blue')
+
+# Add cosine similarity text
+plt.figtext(0.5, 0.01, f'Average Cosine Similarity by Group Size', ha='center', fontsize=12, 
+            bbox={'facecolor':'lightgray', 'alpha':0.5, 'pad':5})
+
+# Set equal aspect and grid
+plt.grid(True)
+
+# Add labels and title
+plt.xlabel('Group Size')
+plt.ylabel('Average Cosine Similarity')
+plt.title('Average Cosine Similarity Visualization')
 
 plt.show()
