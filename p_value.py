@@ -94,10 +94,10 @@ def parse_prompt_file_random(file_path):
     return results
 
 # Initialize variables
-cos_sim_random_random = []
+cos_sim_random = []
 
 # Read from file
-prompt_outputs_random = parse_prompt_file_random("random_random_prompts.txt")
+prompt_outputs_random = parse_prompt_file_random("generated_output_distribution.txt")
 
 # Load model and tokenizer
 tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
@@ -110,11 +110,10 @@ for output in prompt_outputs_random:
     random_random_embedding = get_embeddings(output['random_output'], tokenizer, model)
     
     # Calculate similarity metrics
-    cos_sim_random_random.append(cosine_similarity(original_embedding, random_random_embedding)[0][0])
+    cos_sim_random.append(cosine_similarity(original_embedding, random_random_embedding)[0][0])
 
 # Initialize variables
 cos_sim_sae = []
-cos_sim_random = []
 
 # Read from file
 prompt_outputs = parse_prompt_file("saved_output.txt")
@@ -123,65 +122,36 @@ for output in prompt_outputs:
     # Get embeddings
     original_embedding = get_embeddings(output['original_output'], tokenizer, model)
     perturbed_embedding = get_embeddings(output['perturbed_output'], tokenizer, model)
-    random_embedding = get_embeddings(output['random_output'], tokenizer, model)
     
     # Calculate similarity metrics
     cos_sim_sae.append(cosine_similarity(original_embedding, perturbed_embedding)[0][0])
-    cos_sim_random.append(cosine_similarity(original_embedding, random_embedding)[0][0])
 
-plt.plot(range(80), cos_sim_sae, linestyle='--', marker='o', color='red', label='SAE-Informed Perturbation of Most Salient Word')
-plt.plot(range(80), cos_sim_random, linestyle='--', marker='o', color='green', label='Random Perturbation of Most Salient Word')
-plt.plot(range(80), cos_sim_random_random, linestyle='--', marker='o', color='blue', label='Random Perturbation of Random Word')
+mu_sae = np.mean(cos_sim_sae)
+mu_null = np.mean(cos_sim_random)
 
-# Add cosine similarity text
-plt.figtext(0.5, 0.01, f'Cosine Similarity', ha='center', fontsize=12, 
-            bbox={'facecolor':'lightgray', 'alpha':0.5, 'pad':5})
+test_statistic = mu_sae - mu_null
 
-# Set equal aspect and grid
-plt.grid(True)
+print('Average SAE: ', mu_sae)
+print('Average Random: ', mu_null)
+print('Test statistic: ', test_statistic)
 
-# Add labels and title
-plt.xlabel('Prompt Index')
-plt.ylabel('Cosine Similarity')
-plt.title('Cosine Similarity Visualization')
+# Step 3: Combine the data
+combined = np.concatenate([cos_sim_random, cos_sim_sae])
+n_random = len(cos_sim_random)
+n_special = len(cos_sim_sae)
 
-plt.legend()
-plt.show()
+# Step 4: Run permutation test
+n_iterations = 10000
+diffs = np.zeros(n_iterations)
 
-# Groups 
-sae_groups = []
-random_groups = []
-random_random_groups = []
+for i in range(n_iterations):
+    np.random.shuffle(combined)
+    group_random = combined[:n_random]
+    group_special = combined[n_random:]
+    diffs[i] = np.mean(group_random) - np.mean(group_special)
 
-group_count = np.arange(19, 80, 20)
+# Step 5: Compute p-value (two-tailed)
+p_value = np.mean(np.abs(diffs) >= np.abs(test_statistic))
 
-for count in group_count:
-    sae_groups.append(sum(cos_sim_sae[(count - 19):count])/19)
-    random_groups.append(sum(cos_sim_random[(count - 19):count])/19)
-    random_random_groups.append(sum(cos_sim_random_random[(count - 19):count])/19)
-
-    print("SAE group: ", sum(cos_sim_sae[(count - 19):count])/19)
-    print("Random group: ", sum(cos_sim_random[(count - 19):count])/19)
-    print("Random random group: ", sum(cos_sim_random_random[(count - 19):count])/19)
-    
-
-plt.figure()
-
-plt.plot(group_count, sae_groups, linestyle='--', marker='o', color='red', label='SAE-Informed Perturbation of Most Salient Word')
-plt.plot(group_count, random_groups, linestyle='--', marker='o', color='green', label='Random Perturbation of Most Salient Word')
-plt.plot(group_count, random_random_groups, linestyle='--', marker='o', color='blue', label='Random Perturbation of Random Word')
-
-# Add cosine similarity text
-plt.figtext(0.5, 0.01, f'Average Cosine Similarity by Group Size', ha='center', fontsize=12, 
-            bbox={'facecolor':'lightgray', 'alpha':0.5, 'pad':5})
-
-# Set equal aspect and grid
-plt.grid(True)
-
-# Add labels and title
-plt.xlabel('Group Size')
-plt.ylabel('Average Cosine Similarity')
-plt.title('Average Cosine Similarity Visualization')
-
-plt.legend()
-plt.show()
+print(f"Observed difference in means: {test_statistic:.4f}")
+print(f"Empirical two-tailed p-value: {p_value:.4f}")
