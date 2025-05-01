@@ -51,7 +51,7 @@ cos_sim_sae = []
 cos_sim_random = []
 
 # Read from file
-prompt_outputs = parse_prompt_file("generated_output_distribution.txt")
+prompt_outputs = parse_prompt_file("saved_output_distribution.txt")
 
 # Load model and tokenizer
 tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
@@ -77,13 +77,3 @@ kde_vals = kde(x_vals)
 
 df = pd.DataFrame({'x': x_vals, 'density': kde_vals})
 df.to_csv('kde_curve.csv', index=False)
-
-# Plot the KDE curve
-plt.figure(figsize=(8, 4))
-plt.plot(x_vals, kde_vals, color='blue', label='Null distribution (KDE)')
-plt.xlabel('Cosine Similarity')
-plt.ylabel('Density')
-plt.title('KDE of Cosine Similarities from Random Perturbations')
-plt.legend()
-plt.grid(True)
-plt.show()

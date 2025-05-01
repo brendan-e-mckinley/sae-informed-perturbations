@@ -11,8 +11,9 @@ model_id = "gpt2-small"
 source_set = "att-kk"
 prompt = "Customers browse supermarket aisles selecting produce. Cart wheels squeaking. Cashier scanning barcodes efficiently. Shopping lists forgotten. Coupons saving money. Checkout lines moving slowly. Freezer section chilly. Shoppers comparing prices diligently. Expiration dates checked."
 original_prompt = prompt
+perturbation_count = 5
 
-perturbation_index = list(range(5))
+perturbation_index = list(range(perturbation_count))
 cos_sim_sae = []
 cos_sim_random = []
 

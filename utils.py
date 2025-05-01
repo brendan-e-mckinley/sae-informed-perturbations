@@ -24,40 +24,6 @@ def alignPrompts(shorter_tokens, longer_tokens, shorter_values, longer_values):
     for j in range(len(shorter_tokens)):
         if shorter_tokens[j] not in common_elements:
             shorter_indices_to_remove.append(j)
-
-
-    # for i in range(len(shorter_tokens)):
-    #     if shorter_tokens[i] != longer_tokens[i]:
-    #         longer_indices_to_remove.append(i)
-
-    #         remaining_tokens = shorter_tokens[i:]
-    #         longer_tokens_index = i + 1
-
-    #         while (longer_tokens_index < len(longer_tokens) and longer_tokens[longer_tokens_index] not in remaining_tokens):
-    #             longer_indices_to_remove.append(longer_tokens_index)
-    #             longer_tokens_index += 1
-            
-    #         if (i >= longer_tokens_index):
-    #             shorter_indices_to_remove.extend(range((i+1),longer_tokens_index))
-
-    #         break
-    
-    # for i in range(len(shorter_tokens)):
-    #     if (j < len(longer_tokens) and shorter_tokens[i] != longer_tokens[j]):
-    #         shorter_indices_to_remove.append(i)
-    #         longer_indices_to_remove.append(j)
-    #         j += 1
-    #         if j < len(longer_tokens):
-    #             if i + 2 < len(shorter_tokens):
-    #                 while (shorter_tokens[i + 1] != longer_tokens[j] and shorter_tokens[i + 2] != longer_tokens[j]):
-    #                     longer_indices_to_remove.append(j)
-    #                     j += 1
-    #             elif i + 1 < len(shorter_tokens):
-    #                 while (shorter_tokens[i + 1] != longer_tokens[j]):
-    #                     longer_indices_to_remove.append(j)
-    #                     j += 1   
-    #     else:
-    #         j += 1
     
     longer_values_aligned = longer_values.copy()
     mask = numpy.ones(len(longer_values_aligned), dtype=bool)
@@ -138,8 +104,6 @@ def getWeakestTextForFeature(model_id, layer, index, texts, original_prompt):
     return weakest_prompt
 
 def getStrongestFeaturesForText(model_id, source_set, target_word):
-    # Compose the layer ID string expected by the API
-    #selected_layer = f"{layer}-{source_set}"
 
     payload = {
         "modelId": model_id,
@@ -164,33 +128,8 @@ def getStrongestFeaturesForText(model_id, source_set, target_word):
             result = results[i]
             indexes.append(result['index'])
             selected_layer = result['layer']
-        # print(f"Top concept features for the input: '{target_word}'\n")
-        # for feature in results:
-        #     index = feature['index']
-        #     print(f"Index: {feature['index']}, Max Value: {feature['maxValue']}")
 
         return selected_layer, indexes
     else:
         print("Request failed:", response.status_code)
         print("Response content:", response.content.decode())
-
-    # Build a new request to understand concept feature
-    # url =  "https://www.neuronpedia.org/api/vector/get"
-    # headers = {
-    #     "Content-Type": "application/json"
-    # }
-    # payload = {
-    #     "modelId": model_id,
-    #     "source": top_layer,
-    #     "index": top_index
-    # }
-
-    # response = requests.post(url, headers=headers, json=payload)
-    # if response.status_code == 200:
-    #     data = response.json()
-    #     result = data.get("hookName")
-    #     hook_name = result.get("hookName")
-    #     print(f"Top Concept Feature Hook Name: {hook_name}")
-    # else:
-    #     print("Request failed:", response.status_code)
-    #     print("Response content:", response.content.decode())

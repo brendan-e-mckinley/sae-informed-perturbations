@@ -97,7 +97,7 @@ def parse_prompt_file_random(file_path):
 cos_sim_random = []
 
 # Read from file
-prompt_outputs_random = parse_prompt_file_random("generated_output_distribution.txt")
+prompt_outputs_random = parse_prompt_file_random("saved_output_distribution.txt")
 
 # Load model and tokenizer
 tokenizer = GPT2Tokenizer.from_pretrained('gpt2')

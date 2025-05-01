@@ -46,7 +46,7 @@ def save_output_to_file(file, original_output, perturbed_output, random_output):
     except Exception as e:
         print(f"Error writing to file: {e}")
 
-file_path = "good_prompts.txt" 
+file_path = "final_prompts.txt" 
 prompt_array = read_prompts_from_file(file_path)
     
 # Print the number of prompts read
@@ -108,32 +108,7 @@ for original_prompt in prompt_array:
     random_output = generate_text(random_synonym_prompt, tokenizer, model)
 
     # Save to file
-    file = open("generated_output.txt", 'a', encoding='utf-8')
+    file = open("saved_output.txt", 'a', encoding='utf-8')
     save_output_to_file(file, original_output, perturbed_output, random_output)
     file.close()
 
-    # Get embeddings
-    #original_embedding = get_embeddings(original_output, tokenizer, model)
-    #perturbed_embedding = get_embeddings(perturbed_output, tokenizer, model)
-    #random_embedding = get_embeddings(random_output, tokenizer, model)
-
-    # Calculate similarity metrics
-    #cos_sim_sae.append(cosine_similarity(original_embedding, perturbed_embedding)[0][0])
-    #cos_sim_random.append(cosine_similarity(original_embedding, random_embedding)[0][0])
-
-plt.plot(range(100), cos_sim_sae, linestyle='--', marker='o', color='red')
-plt.plot(range(100), cos_sim_random, linestyle='--', marker='o', color='green')
-
-# Add cosine similarity text
-plt.figtext(0.5, 0.01, f'Cosine Similarity', ha='center', fontsize=12, 
-            bbox={'facecolor':'lightgray', 'alpha':0.5, 'pad':5})
-
-# Set equal aspect and grid
-plt.grid(True)
-
-# Add labels and title
-plt.xlabel('Iteration')
-plt.ylabel('Cosine Similarity')
-plt.title('Cosine Similarity Visualization')
-
-plt.show()
