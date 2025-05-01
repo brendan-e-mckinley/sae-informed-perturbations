@@ -1,8 +1,10 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.stats import gaussian_kde
 from model_interaction import get_embeddings, cosine_similarity
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
+import pandas as pd
 
 def parse_prompt_file(file_path):
     """
@@ -78,6 +80,18 @@ for output in prompt_outputs:
     # Calculate similarity metrics
     cos_sim_sae.append(cosine_similarity(original_embedding, perturbed_embedding)[0][0])
     cos_sim_random.append(cosine_similarity(original_embedding, random_embedding)[0][0])
+
+# Create a Gaussian KDE from the data
+kde = gaussian_kde(cos_sim_sae)
+
+# Create a range of x values over which to evaluate the KDE
+x_vals = np.linspace(.9, 1, 500)
+
+# Evaluate the KDE over the x values
+kde_vals = kde(x_vals)
+
+df = pd.DataFrame({'x': x_vals, 'density': kde_vals})
+df.to_csv('kde_curve_sae.csv', index=False)
 
 plt.plot(range(79), cos_sim_sae, linestyle='--', marker='o', color='red')
 plt.plot(range(79), cos_sim_random, linestyle='--', marker='o', color='green')
