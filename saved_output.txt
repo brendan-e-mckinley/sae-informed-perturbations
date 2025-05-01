@@ -578,7 +578,7 @@ PERTURBED_PROMPT: forward-looking poetry explores personal experience through ca
 
 The book is available in paperback and Kindle.
 
-RANDOM_PROMPT forward-looking poetry explores personal experience through carefully chosen language, creating evocative imagery that resonates emotionally while challenging conventional perspectives.
+RANDOM_PROMPT: forward-looking poetry explores personal experience through carefully chosen language, creating evocative imagery that resonates emotionally while challenging conventional perspectives.
 
 The book is available in paperback and Kindle.
 ----------------------------------------

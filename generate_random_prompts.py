@@ -42,7 +42,7 @@ def save_output_to_file(file, original_output, random_output_1):
     except Exception as e:
         print(f"Error writing to file: {e}")
 
-file_path = "distribution_prompts.txt"  # Change this to your file path
+file_path = "final_prompts.txt"  # Change this to your file path
 prompt_array = read_prompts_from_file(file_path)
     
 # Print the number of prompts read
@@ -80,6 +80,6 @@ for original_prompt in prompt_array:
     random_output_1 = generate_text(random_target_synonym_prompt, tokenizer, model)
 
     # Save to file
-    file = open("generated_output_distribution.txt", 'a', encoding='utf-8')
+    file = open("random_random_prompts.txt", 'a', encoding='utf-8')
     save_output_to_file(file, original_output, random_output_1)
     file.close()
