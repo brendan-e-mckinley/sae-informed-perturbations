@@ -15,6 +15,8 @@
 \usepackage{algorithm}
 \usepackage{algorithmic}
 \usepackage{graphicx}
+\usepackage[explicit]{titlesec}
+\usepackage{lipsum}
 
 \graphicspath{ {./figures/} }
 
@@ -23,6 +25,7 @@
 \date\today
 
 \begin{document}
+  
 \maketitle 
 
 \section*{Abstract}
@@ -50,15 +53,15 @@ Natural language adversarial perturbations reveal an important weakness of large
 
 \subsection*{Literature Review}
 
-One example of language-based adversarial perturbations for neural networks is provided by Meng and Wattenhofer in their paper ``A Geometry-Inspired Attack for Generating Natural Language Adversarial Examples". The authors detail a method for developing adversarial attacks on language classification models. This method uses the \texttt{DeepFool} algorithm to find a synonyms for a given input prompt which are close to the model's decision boundary, or the threshold which separates one semantic concept from another \citep{meng2020}. Meng and Wattenhofer are able to successfully trick the model under test into incorrectly classifying various input prompts without replacing more than a few words in the input prompt with adversarial synonyms. \\
+One example of language-based adversarial perturbations for neural networks is provided by Meng and Wattenhofer in their paper ``A Geometry-Inspired Attack for Generating Natural Language Adversarial Examples" \citep{meng2020}. The authors detail a method for developing adversarial attacks on language classification models. This method uses the \texttt{DeepFool} algorithm to find a synonyms for a given input prompt which are close to the model's decision boundary, or the threshold which separates one semantic concept from another. Meng and Wattenhofer are able to successfully trick the model under test into incorrectly classifying various input prompts without replacing more than a few words in the input prompt with adversarial synonyms. \\
 
-For this attack, deep neural networks are tasked with classifying a prompt string. First, a word saliency score is computed for each individual word in the prompt by evaluating how the classification changes when a given word is replaced with another word from outside of the vocabulary. The word which yields the highest changes in the model's output is assigned the highest saliency score. Next, a group of synonyms for the word with the highest saliency score is compiled using Princeton's \texttt{WordNet} tool. Finally, the synonym with the largest projection onto $r_i$, the vector between the original text vector and the decision boundary (which is determined using the \texttt{DeepFool}, is selected, and this synonym replaces the word with the highest saliency score in the prompt. This process is repeated until the model is fooled into wrongly classifying the text input. \\ 
+For this attack, deep neural networks are tasked with classifying a prompt string. First, a word saliency score is computed for each individual word in the prompt by evaluating how the classification changes when a given word is replaced with another word from outside of the vocabulary. The word which yields the highest changes in the model's output is assigned the highest saliency score. Next, a group of synonyms for the word with the highest saliency score is compiled using Princeton's \texttt{WordNet} tool. Finally, the synonym with the largest projection onto $r_i$, the vector between the original text vector and the decision boundary, is selected, and this synonym replaces the word with the highest saliency score in the prompt. This process is repeated until the model is fooled into wrongly classifying the text input. \\ 
 
 %In ``Fighting Gradients with Gradients: Dynamic Defenses against Adversarial Attacks", Wang et al argue that popular methods for training models to defend against adversarial perturbations are too static and fail to account for attacks which will learn from and respond to defenses dynamically, particularly attacks which use iterative gradient optimization \citep{wang2021fighting}. They propose a dynamic defense in which for every new perturbed input $x + \delta^T$, the model will counter-perturb with $\Delta^T$. This defense is known as dent, or ``Defensive Entropy Minimization". The authors remark that ``While adversaries optimize to cross decision boundaries, entropy minimization optimizes to distance predictions from decision boundaries, interfering with attacks" \citep{wang2021fighting}. In other words, dent continuously moves the decision boundary goalposts so that methods like the one proposed by Meng and Wattenhofer have difficulty determining the ``nearness" of their perturbed input to the model's decision boundary. The code used for this paper is also accessible through a GitHub repository. \\ 
 
-Meng and Wattenhofer evaluate their method's performance against a convolutional neural network and a recurrent neural network. Approximating these models' respective decision boundaries can be done using an algorithm (in this case, DeepFool \citep{deepfool}) which leverages the model's loss function to iteratively move perturbations close to the decision boundaries of the model. However, this approach makes less sense in the context of a transformer model, particularly a large language model like OpenAI's \texttt{gpt2-small}, whose decision ``geometry" is impossible to decipher, as it comprises a massive number of vectors compressed into parameter-space.\\ 
+Meng and Wattenhofer evaluate their method's performance against a convolutional neural network and a recurrent neural network. Approximating these models' respective decision boundaries can be done using an algorithm (in this case, \texttt{DeepFool} \citep{deepfool}) which leverages the model's loss function to iteratively move perturbations close to the decision boundaries of the model. However, this approach makes less sense in the context of a transformer model, particularly a large language model like OpenAI's \texttt{gpt2-small}, whose decision ``geometry" is impossible to decipher, as it comprises a massive number of vectors compressed into parameter-space.\\ 
 
-Transformer architectures present unique complexities for adversarial defense that differ from traditional neural network models. Unlike convolutional neural networks used in image classification, transformers rely on attention mechanisms that create intricate, context-dependent representations of input data. The self-attention mechanism means that each token's representation is dynamically computed based on its relationships with all other tokens in the sequence, creating a highly context-sensitive mapping. \\
+Transformer architectures present unique complexities for adversarial perturbations that differ from traditional neural network models. Unlike convolutional neural networks used in image classification, transformers rely on attention mechanisms that create intricate, context-dependent representations of input data. The self-attention mechanism means that each token's representation is dynamically computed based on its relationships with all other tokens in the sequence, creating a highly context-sensitive mapping. \\
 
 Sparse auto-encoders provide a potential solution. SAEs embed the encoded vectors used by the model in a much higher-dimensional space, providing a window into where feature activations actually occur. A language model's ``geometry" is more easily understood in this higher-dimensional space, and a given vector's alignment with or distance from a particular concept vector may be useful for designing adversarial perturbations.\\ 
 
@@ -74,7 +77,7 @@ Throughout this paper, $\mathbb{S}_w$ will denote the space of synonyms for a pa
 
 For a given original prompt $o$, the two strongest activation features for that prompt were determined (details in the \texttt{getStrongestFeaturesForText} method of \texttt{utils.py}). The prompt was then split into individual words. For each word in the prompt, the word was replaced with whitespace and the difference in activation values for the strongest activation feature between the original prompt $o$ and the prompt with that word omitted was computed. With $x_{o}$ denoting the activation values for $o$ and $x_{w}$ denoting the activation values for $o$ with a particular word $w$ omitted, the target word (the word with the highest saliency) was given by
 \begin{align*}
-w_\text{target} &= \max_{w \in O} \lVert x_{o} - x_w \rVert_2 
+w_\text{target} &= \max_{w \in \mathbb{O}} \lVert x_{o} - x_w \rVert_2 
 \end{align*}
 So, the highest-saliency word maximizes the norm of the difference between the activation values for the original prompt and those for the prompt with that word omitted. \\ 
 
